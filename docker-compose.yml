@@ -17,6 +17,7 @@ services:
   # '--profile=setup' CLI flag to Compose commands, or "up" the service by name
   # such as 'docker compose up setup'.
   setup:
+    # when use "docker-compose up setup"
     profiles:
       - setup
     build:
@@ -48,14 +49,20 @@ services:
       args:
         ELASTIC_VERSION: ${ELASTIC_VERSION}
     volumes:
-      - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro,Z
+      # ro: read-only
+      # The z option indicates that the bind mount content is shared among multiple containers.
+      # The Z option indicates that the bind mount content is private and unshared. 
+      # The latest same-name file will be overwriten.
       - elasticsearch:/usr/share/elasticsearch/data:Z
+      - elasticsearch_keystore:/usr/share/elasticsearch/config/:Z
+      - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro,Z
     ports:
       - 9200:9200
       - 9300:9300
     environment:
       node.name: elasticsearch
       ES_JAVA_OPTS: -Xms512m -Xmx512m
+      #ES_JAVA_OPTS: -Xms32g -Xmx32g
       # Bootstrap password.
       # Used to initialize the keystore during the initial startup of
       # Elasticsearch. Ignored on subsequent runs.
@@ -82,6 +89,7 @@ services:
       - 9600:9600
     environment:
       LS_JAVA_OPTS: -Xms256m -Xmx256m
+      #LS_JAVA_OPTS: -Xms4g -Xmx8g
       LOGSTASH_INTERNAL_PASSWORD: ${LOGSTASH_INTERNAL_PASSWORD:-}
     networks:
       - elk
@@ -112,3 +120,4 @@ networks:
 
 volumes:
   elasticsearch:
+  elasticsearch_keystore:
