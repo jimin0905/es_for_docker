@@ -25,10 +25,22 @@ services:
       args:
         ELASTIC_VERSION: ${ELASTIC_VERSION}
     init: true
+    user: "0"
     volumes:
       - ./setup/entrypoint.sh:/entrypoint.sh:ro,Z
       - ./setup/lib.sh:/lib.sh:ro,Z
       - ./setup/roles:/roles:ro,Z
+      - certs:/$CERTS_DIR:Z
+      #- .:/usr/share/elasticsearch/config/certificates
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    cap_add:
+      - IPC_LOCK
     environment:
       ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-}
       LOGSTASH_INTERNAL_PASSWORD: ${LOGSTASH_INTERNAL_PASSWORD:-}
@@ -56,6 +68,7 @@ services:
       - elasticsearch:/usr/share/elasticsearch/data:Z
       - elasticsearch_keystore:/usr/share/elasticsearch/config/:Z
       - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro,Z
+      - certs:$CERTS_DIR:ro
     ports:
       - 9200:9200
       - 9300:9300
@@ -70,6 +83,17 @@ services:
       # Use single node discovery in order to disable production mode and avoid bootstrap checks.
       # see: https://www.elastic.co/guide/en/elasticsearch/reference/current/bootstrap-checks.html
       discovery.type: single-node
+      # HTTP for API
+      # xpack.security.http.ssl.enabled: true
+      # xpack.security.http.ssl.key: CERTS_DIR/instance/instance.key
+      # xpack.security.http.ssl.certificate_authorities: CERTS_DIR/ca/ca.crt
+      # xpack.security.http.ssl.certificate: CERTS_DIR/instance/instance.crt
+      # TSL for Inernal Node
+      xpack.security.transport.ssl.enabled: "true"
+      xpack.security.transport.ssl.verification_mode: certificate
+      xpack.security.transport.ssl.certificate_authorities: $CERTS_DIR/ca/ca.crt
+      xpack.security.transport.ssl.certificate: $CERTS_DIR/elasticsearch/elasticsearch.crt
+      xpack.security.transport.ssl.key: $CERTS_DIR/elasticsearch/elasticsearch.key
     networks:
       - elk
     restart: unless-stopped
@@ -104,10 +128,18 @@ services:
         ELASTIC_VERSION: ${ELASTIC_VERSION}
     volumes:
       - ./kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml:ro,Z
+      - certs:$CERTS_DIR:ro
     ports:
       - 5601:5601
     environment:
       KIBANA_SYSTEM_PASSWORD: ${KIBANA_SYSTEM_PASSWORD:-}
+      # Security
+      XPACK_MONITORING_ENABLED: "true"
+      XPACK_MONITORING_COLLECTION_ENABLED: "true"
+      XPACK_SECURITY_ENABLED: "true"
+      ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES: $CERTS_DIR/ca/ca.crt
+      ELASTICSEARCH_SSL_VERIFICATIONMODE: certificate
+      SERVER_SSL_ENABLED: "false"
     networks:
       - elk
     depends_on:
@@ -121,3 +153,4 @@ networks:
 volumes:
   elasticsearch:
   elasticsearch_keystore:
+  certs:
