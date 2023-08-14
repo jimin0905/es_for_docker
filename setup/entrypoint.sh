@@ -71,9 +71,11 @@ log 'Ｇenerating cert.'
         find . -type d -exec chmod 750 \{\} \;;
         find . -type f -exec chmod 640 \{\} \;;
         echo "Waiting for Elasticsearch availability";
-        until curl -s --cacert config/certs/ca/ca.crt https://elasticsearch:9200 | grep -q "missing authentication credentials"; do sleep 30; done;
-        echo "Setting kibana_system password";
-        until curl -s -X POST --cacert config/certs/ca/ca.crt -u "elastic:${ELASTIC_PASSWORD}" -H "Content-Type: application/json" https://es01:9200/_security/user/kibana_system/_password -d "{\"password\":\"${KIBANA_PASSWORD}\"}" | grep -q "^{}"; do sleep 10; done;
+		# 2>&1 無論是哪種都可以將錯誤輸出傳遞給 grep 進行處理。
+        # until curl -s --cacert config/certs/ca/ca.crt https://elasticsearch:9200 | grep -q "missing authentication credentials"; do sleep 30; done;
+		# until curl -s --cacert config/certs/ca/ca.crt https://elasticsearch:9200 2>&1 | grep -q "missing authentication credentials" || curl -s http://elasticsearch:9200 2>&1 | grep -q "missing authentication credentials"; do sleep 30; done;
+        # echo "Setting kibana_system password";
+        # until curl -s -X POST --cacert config/certs/ca/ca.crt -u "elastic:${ELASTIC_PASSWORD}" -H "Content-Type: application/json" https://es01:9200/_security/user/kibana_system/_password -d "{\"password\":\"${KIBANA_PASSWORD}\"}" | grep -q "^{}"; do sleep 10; done;
         echo "All done!";
 # ---------------------------------------------------------------------------------
 log 'Waiting for availability of Elasticsearch. This can take several minutes.'
